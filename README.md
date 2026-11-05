@@ -13,8 +13,10 @@ pnpm install
 docker compose up -d
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
+docker compose exec -T postgres psql -U aurevi -d aurevi -c "CREATE DATABASE aurevi_test;"
 pnpm --filter @aurevi/shared build
 pnpm --filter @aurevi/api db:migrate
+pnpm --filter @aurevi/api build
 pnpm --filter @aurevi/api db:seed
 pnpm dev
 ```

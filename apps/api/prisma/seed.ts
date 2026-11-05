@@ -1,5 +1,5 @@
 // Fictional catalog for development. Names and placeholder images are not real products.
-import { type SettingKey, type SettingValue, settingsSchemas } from '@aurevi/shared';
+import { allUfs, type SettingKey, type SettingValue, settingsSchemas } from '@aurevi/shared';
 import { PrismaPg } from '@prisma/adapter-pg';
 import argon2 from 'argon2';
 import { existsSync } from 'node:fs';
@@ -16,10 +16,22 @@ const defaults: { [K in SettingKey]: SettingValue<K> } = {
   min_installment_cents: 3000,
   pix_discount_percent: 5,
   free_shipping_threshold_cents: null,
-  flat_shipping_by_uf: {},
+  flat_shipping_by_uf: Object.fromEntries(
+    allUfs.map((uf) => [
+      uf,
+      uf === 'MG'
+        ? { label: 'Frete fixo Minas Gerais', cents: 990, minDays: 2, maxDays: 4 }
+        : { label: `Frete fixo ${uf}`, cents: 2490, minDays: 5, maxDays: 10 },
+    ]),
+  ),
   shipping_origin: { postalCode: '01001000' },
   announcement_messages: ['Ambiente de desenvolvimento: produtos fictícios'],
-  home_hero: { imageKey: 'placeholder.svg', alt: 'Imagem provisória', href: '/categoria/vestidos' },
+  home_hero: {
+    imageKey: 'brand/editorial-linho.webp',
+    alt: 'Modelo com calça e top em tom cacau diante de cortinas de linho',
+    href: '/novidades',
+    title: 'Seu estilo. Sua presença.',
+  },
   home_collections: [],
   store_info: { legalName: '', cnpj: '', address: '', email: '', whatsapp: '', instagram: '' },
 };
@@ -102,20 +114,30 @@ for (const [categorySlug, name, priceCents, compareAtPriceCents] of catalog) {
       heightCm: 5,
       lengthCm: 30,
       images: {
-        create: colorValues.map((value, position) => ({
-          optionValueId: value.id,
-          storageKey: 'placeholder.svg',
-          alt: `${name} na cor ${value.value}`,
-          width: 800,
-          height: 1067,
-          position,
-        })),
+        create: [
+          ...colorValues.map((value, position) => ({
+            optionValueId: value.id,
+            storageKey: `placeholder-${value.value.toLowerCase()}.svg`,
+            alt: `${name} na cor ${value.value}`,
+            width: 800,
+            height: 1067,
+            position,
+          })),
+          {
+            storageKey: 'placeholder.svg',
+            alt: `${name}, detalhe`,
+            width: 800,
+            height: 1067,
+            position: colorValues.length,
+          },
+        ],
       },
       variants: {
         create: colorValues.flatMap((colorValue) =>
           sizeValues.map((sizeValue) => ({
             sku: `${slug}-${colorValue.value}-${sizeValue.value}`.toUpperCase(),
-            stockOnHand: 5,
+            // One sold-out size, so the storefront's unavailable state can be seen in development.
+            stockOnHand: sizeValue.value === 'G' && colorValue.value === 'Cacau' ? 0 : 5,
             optionValues: {
               create: [{ optionValueId: colorValue.id }, { optionValueId: sizeValue.id }],
             },
@@ -125,6 +147,12 @@ for (const [categorySlug, name, priceCents, compareAtPriceCents] of catalog) {
     },
   });
 }
+
+await prisma.coupon.upsert({
+  where: { code: 'TESTE10' },
+  create: { code: 'TESTE10', type: 'percent', value: 10 },
+  update: {},
+});
 
 const adminEmail = process.env['SEED_ADMIN_EMAIL'];
 const adminPassword = process.env['SEED_ADMIN_PASSWORD'];
