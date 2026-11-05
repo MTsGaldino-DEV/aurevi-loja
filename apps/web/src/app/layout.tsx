@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { connection } from 'next/server';
 import type { ReactNode } from 'react';
+import { CartProvider } from '@/components/cart-context';
+import { CartDrawer } from '@/components/cart-drawer';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 import { apiGet } from '@/lib/api';
@@ -36,9 +38,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="pt-BR" className={`${serif.variable} ${sans.variable}`}>
       <body className="flex min-h-svh flex-col">
-        <SiteHeader layout={layout} />
-        <main className="flex-1">{children}</main>
-        <SiteFooter layout={layout} />
+        <CartProvider>
+          <SiteHeader layout={layout} />
+          <main className="flex-1">{children}</main>
+          <SiteFooter layout={layout} />
+          <CartDrawer />
+        </CartProvider>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 import type { StorefrontLayout } from '@aurevi/shared';
 import Image from 'next/image';
 import Link from 'next/link';
+import { CartButton } from '@/components/cart-drawer';
 
 export function SiteHeader({ layout }: { layout: StorefrontLayout }) {
   return (
@@ -49,7 +50,9 @@ export function SiteHeader({ layout }: { layout: StorefrontLayout }) {
             priority
           />
         </Link>
-        <div />
+        <div className="flex justify-end">
+          <CartButton />
+        </div>
       </div>
 
       <div id="site-menu" popover="auto" className="menu-panel bg-paper p-6 text-cocoa">

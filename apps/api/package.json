@@ -8,7 +8,8 @@
     "build": "prisma generate && nest build",
     "start": "node dist/main.js",
     "typecheck": "prisma generate && tsc --noEmit",
-    "lint": "eslint src prisma/seed.ts --config ../../eslint.config.mjs",
+    "test": "pnpm exec prisma migrate deploy --config prisma.test.config.ts && node --import tsx --test test/*.test.ts",
+    "lint": "eslint src test prisma/seed.ts --config ../../eslint.config.mjs",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "prisma db seed"
   },
@@ -17,6 +18,7 @@
     "@nestjs/common": "12.3.3",
     "@nestjs/core": "12.3.3",
     "@nestjs/platform-express": "12.3.3",
+    "@nestjs/schedule": "12.0.2",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "argon2": "0.45.2",

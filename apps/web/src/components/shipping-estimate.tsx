@@ -3,10 +3,16 @@
 import { formatBRL, type ShippingOption } from '@aurevi/shared';
 import { type FormEvent, useState } from 'react';
 
-const days = ({ minDays, maxDays }: ShippingOption) =>
+export const shippingDays = ({ minDays, maxDays }: Pick<ShippingOption, 'minDays' | 'maxDays'>) =>
   minDays === maxDays ? `${maxDays} dias úteis` : `${minDays} a ${maxDays} dias úteis`;
 
-export function ShippingEstimate() {
+export function ShippingEstimate({
+  endpoint = '/api/shipping/quote',
+  inputId = 'cep',
+}: {
+  endpoint?: string;
+  inputId?: string;
+}) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'done'>('idle');
   const [options, setOptions] = useState<ShippingOption[]>([]);
 
@@ -15,7 +21,7 @@ export function ShippingEstimate() {
     setStatus('loading');
     const postalCode = String(new FormData(event.currentTarget).get('cep'));
     try {
-      const response = await fetch('/api/shipping/quote', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postalCode }),
@@ -30,12 +36,12 @@ export function ShippingEstimate() {
 
   return (
     <form onSubmit={submit}>
-      <label htmlFor="cep" className="text-sm">
+      <label htmlFor={inputId} className="text-sm">
         Calcule o frete
       </label>
       <div className="mt-1 flex gap-2">
         <input
-          id="cep"
+          id={inputId}
           name="cep"
           inputMode="numeric"
           autoComplete="postal-code"
@@ -62,7 +68,7 @@ export function ShippingEstimate() {
             {options.map((option) => (
               <li key={option.id} className="flex justify-between gap-4">
                 <span>
-                  {option.label}, {days(option)}
+                  {option.label}, {shippingDays(option)}
                 </span>
                 <span className="font-medium">
                   {option.cents === 0 ? 'Grátis' : formatBRL(option.cents)}

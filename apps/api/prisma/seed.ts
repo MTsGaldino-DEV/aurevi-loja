@@ -148,6 +148,12 @@ for (const [categorySlug, name, priceCents, compareAtPriceCents] of catalog) {
   });
 }
 
+await prisma.coupon.upsert({
+  where: { code: 'TESTE10' },
+  create: { code: 'TESTE10', type: 'percent', value: 10 },
+  update: {},
+});
+
 const adminEmail = process.env['SEED_ADMIN_EMAIL'];
 const adminPassword = process.env['SEED_ADMIN_PASSWORD'];
 if (adminEmail && adminPassword) {

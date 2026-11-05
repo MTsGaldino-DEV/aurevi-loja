@@ -45,6 +45,20 @@ body {
   background: rgb(0 0 0 / 0.35);
 }
 
+/* Native dialog as a side panel: focus trap and Escape come with the element. */
+.cart-panel {
+  inset: 0 0 0 auto;
+  height: 100dvh;
+  max-height: none;
+  width: min(28rem, 100vw);
+  max-width: none;
+  margin: 0;
+}
+
+.cart-panel::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+
 /* Keeps the end of the page clear of the fixed buy bar on phones. */
 @media (max-width: 63.99rem) {
   body:has(.buy-bar) {

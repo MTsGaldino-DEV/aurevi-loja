@@ -9,6 +9,7 @@ import {
 } from '@aurevi/shared';
 import Image from 'next/image';
 import { useMemo, useRef, useState } from 'react';
+import { useCart } from '@/components/cart-context';
 import { ShippingEstimate } from '@/components/shipping-estimate';
 import { imageUrl, isVector } from '@/lib/images';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,9 @@ export function ProductView({
     return colorOption && first ? { [colorOption.name]: first.id } : {};
   });
   const [missingOptions, setMissingOptions] = useState(false);
+  const [buyError, setBuyError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const { addItem } = useCart();
   const optionsRef = useRef<HTMLDivElement>(null);
 
   const selectedIds = Object.values(selection);
@@ -65,10 +69,20 @@ export function ProductView({
   });
   const onSale = product.compareAtPriceCents !== null && product.compareAtPriceCents > priceCents;
 
-  function chooseToBuy() {
-    if (!isComplete) {
+  async function chooseToBuy() {
+    if (!variant) {
       setMissingOptions(true);
       optionsRef.current?.scrollIntoView({ block: 'center' });
+      return;
+    }
+    setBuyError(null);
+    setAdding(true);
+    try {
+      await addItem(variant.id);
+    } catch (cause) {
+      setBuyError((cause as Error).message);
+    } finally {
+      setAdding(false);
     }
   }
 
@@ -188,12 +202,18 @@ export function ProductView({
           </p>
         )}
 
+        {buyError && (
+          <p role="alert" className="mt-3 text-sm font-medium">
+            {buyError}
+          </p>
+        )}
+
         {/* Fixed on phones, so buying never depends on scrolling back. */}
         <div className="buy-bar fixed inset-x-0 bottom-0 z-20 border-t border-sand bg-paper p-3 lg:static lg:mt-6 lg:border-0 lg:bg-transparent lg:p-0">
           <button
             type="button"
             onClick={chooseToBuy}
-            disabled={buyDisabled}
+            disabled={buyDisabled || adding}
             className="w-full bg-cocoa py-4 text-sm font-medium text-paper disabled:bg-dune disabled:text-cocoa"
           >
             {buyLabel}
