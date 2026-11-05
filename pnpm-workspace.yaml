@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+minimumReleaseAgeExclude:
+  - '@nestjs/common@12.3.3'
+  - '@nestjs/core@12.3.3'
+  - '@nestjs/platform-express@12.3.3'
+
+allowBuilds:
+  '@prisma/engines': true
+  argon2: true
+  esbuild: true
+  prisma: true
