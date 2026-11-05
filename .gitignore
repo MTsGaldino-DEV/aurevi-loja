@@ -14,3 +14,5 @@ dist/
 .turbo/
 *.tsbuildinfo
 apps/api/src/generated/
+
+apps/web/next-env.d.ts

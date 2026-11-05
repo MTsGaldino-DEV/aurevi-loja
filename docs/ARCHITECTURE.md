@@ -42,7 +42,7 @@ Navegador -> Cloudflare -> Caddy -> /api/*  -> api (NestJS) -> postgres
 
 - **Mesma origem:** loja e API no mesmo domínio, então não há CORS na operação normal e os cookies ficam simples.
 - **Imagens:** upload pela API para o R2. `next/image` otimiza com cache em volume.
-- **Revalidação:** a API chama uma rota interna do Next, com segredo, ao mudar produto, categoria ou `settings`.
+- **Cache e revalidação:** as páginas são renderizadas por requisição, porque a API não está acessível no build da imagem Docker. Os dados vêm do cache de `fetch` do Next (60 s, tag `catalog`), com o mesmo efeito prático do ISR. A API chama uma rota interna do Next, com segredo, ao mudar produto, categoria ou `settings`; essa chamada entra com o admin, na Fase 8.
 - **Sem fila externa:** uma única instância da API roda os jobs. Basta enquanto houver um container.
 - **Desenvolvimento:** imagens em pasta local no lugar do R2 e e-mail apenas em log, para não exigir cadastro em serviços.
 

@@ -8,6 +8,13 @@
   --brand-cocoa: #66513d;
   --brand-gold: #cfb77f;
   --radius: 0.125rem;
+  --page-gutter: 1rem;
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --page-gutter: 2.5rem;
+  }
 }
 
 @theme inline {
@@ -22,4 +29,5 @@
   --font-serif: var(--font-instrument-serif);
   --font-sans: var(--font-dm-sans);
   --radius-sm: var(--radius);
+  --spacing-gutter: var(--page-gutter);
 }

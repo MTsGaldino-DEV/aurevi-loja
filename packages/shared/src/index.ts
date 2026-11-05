@@ -1,5 +1,6 @@
 export * from './settings.ts';
 export * from './catalog.ts';
+export * from './commerce.ts';
 
 export const orderStatuses = [
   'pending_payment',
