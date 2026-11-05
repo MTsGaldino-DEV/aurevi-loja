@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+!.env.example
+
+# Screenshots contain third-party photos and copy: local reference only, never committed.
+docs/research/screens/
+
+# Local working brief, kept private because it names the reference store.
+prompt.md
+
+.next/
+dist/
+.turbo/
+*.tsbuildinfo
+apps/api/src/generated/

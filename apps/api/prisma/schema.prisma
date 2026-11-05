@@ -1,0 +1,450 @@
+// Money is always integer cents. Primary keys are UUIDs, except on the variant/option join table.
+// CHECK constraints, the citext extension and the order number start are raw SQL in the initial
+// migration, because Prisma has no schema syntax for them. See docs/ARCHITECTURE.md.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProductStatus {
+  draft
+  active
+  archived
+}
+
+enum OrderStatus {
+  pending_payment
+  paid
+  preparing
+  shipped
+  delivered
+  canceled
+  refunded
+}
+
+enum PaymentMethod {
+  pix
+  credit_card
+}
+
+enum CouponType {
+  percent
+  fixed
+  free_shipping
+}
+
+enum StockMovementType {
+  reserve
+  release
+  sale
+  restock
+  adjustment
+  return
+}
+
+model Category {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  parentId  String?  @map("parent_id") @db.Uuid
+  name      String
+  slug      String   @unique
+  position  Int      @default(0)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@index([parentId, position])
+  @@map("categories")
+}
+
+model Product {
+  id                  String        @id @default(uuid(7)) @db.Uuid
+  categoryId          String        @map("category_id") @db.Uuid
+  name                String
+  slug                String        @unique
+  description         String
+  composition         String?
+  /// Validated by a Zod schema in packages/shared: columns (bust, waist...) and one row per size.
+  sizeChart           Json?         @map("size_chart")
+  /// Example: "Model is 1.70 m and wears size M".
+  modelInfo           String?       @map("model_info")
+  status              ProductStatus @default(draft)
+  priceCents          Int           @map("price_cents")
+  compareAtPriceCents Int?          @map("compare_at_price_cents")
+  weightGrams         Int           @map("weight_grams")
+  widthCm             Int           @map("width_cm")
+  heightCm            Int           @map("height_cm")
+  lengthCm            Int           @map("length_cm")
+  seoTitle            String?       @map("seo_title")
+  seoDescription      String?       @map("seo_description")
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  category Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  variants ProductVariant[]
+  images   ProductImage[]
+
+  @@index([status, categoryId, createdAt])
+  @@map("products")
+}
+
+/// Global options such as Color and Size, so filters and values stay consistent across products.
+model ProductOption {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String   @unique
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  values ProductOptionValue[]
+
+  @@map("product_options")
+}
+
+model ProductOptionValue {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  optionId  String   @map("option_id") @db.Uuid
+  value     String
+  hex       String?
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  option   ProductOption       @relation(fields: [optionId], references: [id], onDelete: Restrict)
+  variants VariantOptionValue[]
+  images   ProductImage[]
+
+  @@unique([optionId, value])
+  @@map("product_option_values")
+}
+
+model ProductVariant {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  productId     String   @map("product_id") @db.Uuid
+  sku           String   @unique
+  priceCents    Int?     @map("price_cents")
+  stockOnHand   Int      @default(0) @map("stock_on_hand")
+  stockReserved Int      @default(0) @map("stock_reserved")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  product        Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  optionValues   VariantOptionValue[]
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model VariantOptionValue {
+  variantId     String @map("variant_id") @db.Uuid
+  optionValueId String @map("option_value_id") @db.Uuid
+
+  variant     ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValue ProductOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Restrict)
+
+  @@id([variantId, optionValueId])
+  @@index([optionValueId])
+  @@map("variant_option_values")
+}
+
+model ProductImage {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  productId     String   @map("product_id") @db.Uuid
+  /// When set, the image belongs to this color and the gallery follows the selected color.
+  optionValueId String?  @map("option_value_id") @db.Uuid
+  storageKey    String   @map("storage_key")
+  alt           String
+  /// Stored so next/image reserves space and avoids layout shift.
+  width         Int
+  height        Int
+  position      Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  product     Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  optionValue ProductOptionValue? @relation(fields: [optionValueId], references: [id], onDelete: SetNull)
+
+  @@index([productId, position])
+  @@map("product_images")
+}
+
+model Customer {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  email     String   @unique @db.Citext
+  name      String
+  cpf       String?
+  phone     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  orders Order[]
+
+  @@map("customers")
+}
+
+model Cart {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  token     String   @unique
+  couponId  String?  @map("coupon_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  coupon Coupon?    @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items  CartItem[]
+
+  @@index([expiresAt])
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  cartId    String   @map("cart_id") @db.Uuid
+  variantId String   @map("variant_id") @db.Uuid
+  quantity  Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId])
+  @@map("cart_items")
+}
+
+model Coupon {
+  id            String     @id @default(uuid(7)) @db.Uuid
+  code          String     @unique @db.Citext
+  type          CouponType
+  /// Percent (1 to 100) or cents, depending on type. Zero for free_shipping.
+  value         Int        @default(0)
+  minOrderCents Int        @default(0) @map("min_order_cents")
+  startsAt      DateTime?  @map("starts_at") @db.Timestamptz(3)
+  expiresAt     DateTime?  @map("expires_at") @db.Timestamptz(3)
+  maxUses       Int?       @map("max_uses")
+  usesCount     Int        @default(0) @map("uses_count")
+  isActive      Boolean    @default(true) @map("is_active")
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  carts  Cart[]
+  orders Order[]
+
+  @@map("coupons")
+}
+
+model Order {
+  id                   String      @id @default(uuid(7)) @db.Uuid
+  /// Readable sequence, started at 1001 by the initial migration.
+  number               Int         @unique @default(autoincrement())
+  customerId           String      @map("customer_id") @db.Uuid
+  status               OrderStatus @default(pending_payment)
+  subtotalCents        Int         @map("subtotal_cents")
+  discountCents        Int         @default(0) @map("discount_cents")
+  pixDiscountCents     Int         @default(0) @map("pix_discount_cents")
+  shippingCents        Int         @map("shipping_cents")
+  totalCents           Int         @map("total_cents")
+  couponId             String?     @map("coupon_id") @db.Uuid
+  couponCode           String?     @map("coupon_code")
+  customerSnapshot     Json        @map("customer_snapshot")
+  shippingAddress      Json        @map("shipping_address")
+  shippingMethod       Json        @map("shipping_method")
+  /// Client-generated per checkout submit, so a double click cannot create two orders.
+  checkoutKey          String      @unique @map("checkout_key")
+  /// Hash of the token in the order link sent by e-mail. The token itself is never stored.
+  accessTokenHash      String      @unique @map("access_token_hash")
+  reservationExpiresAt DateTime?   @map("reservation_expires_at") @db.Timestamptz(3)
+  /// Set when a person must act, for example a payment approved after the order was canceled.
+  reviewReason         String?     @map("review_reason")
+  notes                String?
+  paidAt               DateTime?   @map("paid_at") @db.Timestamptz(3)
+  canceledAt           DateTime?   @map("canceled_at") @db.Timestamptz(3)
+  createdAt            DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  customer       Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  coupon         Coupon?         @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items          OrderItem[]
+  payments       Payment[]
+  shipments      Shipment[]
+  stockMovements StockMovement[]
+
+  @@index([status, reservationExpiresAt])
+  @@index([createdAt])
+  @@index([customerId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  orderId        String   @map("order_id") @db.Uuid
+  variantId      String?  @map("variant_id") @db.Uuid
+  productName    String   @map("product_name")
+  variantLabel   String   @map("variant_label")
+  sku            String
+  imageKey       String?  @map("image_key")
+  unitPriceCents Int      @map("unit_price_cents")
+  quantity       Int
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+/// One row per attempt: a declined card can be retried on the same order.
+model Payment {
+  id                String        @id @default(uuid(7)) @db.Uuid
+  orderId           String        @map("order_id") @db.Uuid
+  provider          String        @default("mercadopago")
+  /// Null only until the provider answers the creation request.
+  providerPaymentId String?       @unique @map("provider_payment_id")
+  method            PaymentMethod
+  /// Raw provider values, mapped to order status in code. Text so a new value cannot break a write.
+  status            String
+  statusDetail      String?       @map("status_detail")
+  amountCents       Int           @map("amount_cents")
+  installments      Int           @default(1)
+  pixQrCode         String?       @map("pix_qr_code")
+  pixQrCodeBase64   String?       @map("pix_qr_code_base64")
+  pixTicketUrl      String?       @map("pix_ticket_url")
+  pixExpiresAt      DateTime?     @map("pix_expires_at") @db.Timestamptz(3)
+  idempotencyKey    String        @unique @map("idempotency_key")
+  raw               Json?
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@map("payments")
+}
+
+model WebhookEvent {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  provider    String
+  eventId     String    @map("event_id")
+  /// The provider resource this event refers to, fetched again before any state change.
+  resourceId  String?   @map("resource_id")
+  payload     Json
+  attempts    Int       @default(0)
+  receivedAt  DateTime  @default(now()) @map("received_at") @db.Timestamptz(3)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
+  error       String?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([provider, eventId])
+  @@index([processedAt, receivedAt])
+  @@map("webhook_events")
+}
+
+model StockMovement {
+  id            String            @id @default(uuid(7)) @db.Uuid
+  variantId     String            @map("variant_id") @db.Uuid
+  orderId       String?           @map("order_id") @db.Uuid
+  adminUserId   String?           @map("admin_user_id") @db.Uuid
+  type          StockMovementType
+  onHandDelta   Int               @default(0) @map("on_hand_delta")
+  reservedDelta Int               @default(0) @map("reserved_delta")
+  note          String?
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  order     Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  adminUser AdminUser?     @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([variantId, createdAt])
+  @@index([orderId])
+  @@map("stock_movements")
+}
+
+model Shipment {
+  id                 String    @id @default(uuid(7)) @db.Uuid
+  orderId            String    @map("order_id") @db.Uuid
+  carrier            String
+  service            String
+  trackingCode       String?   @map("tracking_code")
+  /// Filled when label generation arrives in the product's Phase 2.
+  labelUrl           String?   @map("label_url")
+  melhorEnvioOrderId String?   @unique @map("melhor_envio_order_id")
+  shippedAt          DateTime? @map("shipped_at") @db.Timestamptz(3)
+  deliveredAt        DateTime? @map("delivered_at") @db.Timestamptz(3)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@map("shipments")
+}
+
+model Setting {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  key       String   @unique
+  /// Each key has a Zod schema in packages/shared.
+  value     Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("settings")
+}
+
+/// OAuth tokens that rotate at runtime, such as Melhor Envio's, so they cannot live in .env.
+/// Encrypted with AES-256-GCM using a key from the environment.
+model IntegrationCredential {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  provider        String   @unique
+  accessTokenEnc  String   @map("access_token_enc")
+  refreshTokenEnc String   @map("refresh_token_enc")
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("integration_credentials")
+}
+
+model AdminUser {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  email        String   @unique @db.Citext
+  passwordHash String   @map("password_hash")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sessions       AdminSession[]
+  stockMovements StockMovement[]
+
+  @@map("admin_users")
+}
+
+/// Server-side sessions, so logging out or disabling a user takes effect immediately.
+model AdminSession {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  adminUserId String   @map("admin_user_id") @db.Uuid
+  tokenHash   String   @unique @map("token_hash")
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("admin_sessions")
+}

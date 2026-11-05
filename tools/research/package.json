@@ -1,0 +1,12 @@
+{
+  "name": "aurevi-ux-research",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node capture.mjs check",
+    "capture": "node capture.mjs capture"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}
