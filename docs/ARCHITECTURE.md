@@ -4,34 +4,34 @@ MVP enxuto para uma pessoa manter com 5 a 15 h por semana. O escopo aprovado est
 
 ## 1. Ajustes em relação ao briefing
 
-| Ajuste | Motivo |
-|---|---|
-| Sem `addresses` e sem `carts.customer_id` | Conta de cliente foi para a Fase 2 do produto. O endereço fica no snapshot do pedido. |
-| Sem `carts.abandoned_notified_at` | Recuperação de carrinho está fora do MVP. |
-| `product_options` e `product_option_values` são globais | Filtros consistentes e valores padronizados entre produtos. |
-| `products`: `composition`, `size_chart`, `model_info` | Medidas estruturadas, aprovadas na Fase 0. |
-| `orders`: `checkout_key`, `access_token_hash`, `customer_snapshot`, `pix_discount_cents`, `review_reason` | Duplo clique, consulta do pedido sem conta, histórico e casos que exigem ação humana. |
-| `product_images`: `width`, `height`, `storage_key` | Evita layout shift e permite trocar o domínio das imagens. |
-| Novas: `integration_credentials`, `admin_sessions` | O token do Melhor Envio expira e precisa girar em execução. Sessões no servidor podem ser revogadas. |
-| Recusa de cartão não libera a reserva na hora | A cliente pode tentar de novo até `reservation_expires_at`. |
+| Ajuste                                                                                                    | Motivo                                                                                               |
+| --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Sem `addresses` e sem `carts.customer_id`                                                                 | Conta de cliente foi para a Fase 2 do produto. O endereço fica no snapshot do pedido.                |
+| Sem `carts.abandoned_notified_at`                                                                         | Recuperação de carrinho está fora do MVP.                                                            |
+| `product_options` e `product_option_values` são globais                                                   | Filtros consistentes e valores padronizados entre produtos.                                          |
+| `products`: `composition`, `size_chart`, `model_info`                                                     | Medidas estruturadas, aprovadas na Fase 0.                                                           |
+| `orders`: `checkout_key`, `access_token_hash`, `customer_snapshot`, `pix_discount_cents`, `review_reason` | Duplo clique, consulta do pedido sem conta, histórico e casos que exigem ação humana.                |
+| `product_images`: `width`, `height`, `storage_key`                                                        | Evita layout shift e permite trocar o domínio das imagens.                                           |
+| Novas: `integration_credentials`, `admin_sessions`                                                        | O token do Melhor Envio expira e precisa girar em execução. Sessões no servidor podem ser revogadas. |
+| Recusa de cartão não libera a reserva na hora                                                             | A cliente pode tentar de novo até `reservation_expires_at`.                                          |
 
 ## 2. Stack
 
 Versões estáveis verificadas no npm em 05/11/2026, fixadas sem `^`.
 
-| Pacote | Versão | Nota |
-|---|---|---|
-| Node | 24 | Imagem Docker `node:24`. |
-| `next` | 16.4.5 | App Router, `output: 'standalone'`. |
-| `@nestjs/core` | 12.3.3 | `schedule` 12.0.2 e `throttler` 6.7.1 aceitam a v12. |
-| `prisma`, `@prisma/client` | 7.10.1 | **Não usar a tag `latest`:** o npm aponta para `8.0.0-rc.30`. Usa `@prisma/adapter-pg` e `prisma.config.ts`. |
-| `turbo` | 2.11.10 | Com pnpm workspaces. |
-| `tailwindcss` | 4.3.4 | Com shadcn/ui. |
-| `zod` | 4.6.7 | Em `packages/shared`. |
-| `mercadopago`, `@mercadopago/sdk-react` | 3.6.1, 1.0.7 | |
-| `resend` | 6.37.0 | |
-| `argon2` | 0.45.2 | |
-| PostgreSQL | 16 | |
+| Pacote                                  | Versão       | Nota                                                                                                         |
+| --------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------ |
+| Node                                    | 24           | Imagem Docker `node:24`.                                                                                     |
+| `next`                                  | 16.4.5       | App Router, `output: 'standalone'`.                                                                          |
+| `@nestjs/core`                          | 12.3.3       | `schedule` 12.0.2 e `throttler` 6.7.1 aceitam a v12.                                                         |
+| `prisma`, `@prisma/client`              | 7.10.1       | **Não usar a tag `latest`:** o npm aponta para `8.0.0-rc.30`. Usa `@prisma/adapter-pg` e `prisma.config.ts`. |
+| `turbo`                                 | 2.11.10      | Com pnpm workspaces.                                                                                         |
+| `tailwindcss`                           | 4.3.4        | Com shadcn/ui.                                                                                               |
+| `zod`                                   | 4.6.7        | Em `packages/shared`.                                                                                        |
+| `mercadopago`, `@mercadopago/sdk-react` | 3.6.1, 1.0.7 |                                                                                                              |
+| `resend`                                | 6.37.0       |                                                                                                              |
+| `argon2`                                | 0.45.2       |                                                                                                              |
+| PostgreSQL                              | 16           |                                                                                                              |
 
 ## 3. Topologia
 
@@ -44,7 +44,7 @@ Navegador -> Cloudflare -> Caddy -> /api/*  -> api (NestJS) -> postgres
 - **Imagens:** upload pela API para o R2. `next/image` otimiza com cache em volume.
 - **Revalidação:** a API chama uma rota interna do Next, com segredo, ao mudar produto, categoria ou `settings`.
 - **Sem fila externa:** uma única instância da API roda os jobs. Basta enquanto houver um container.
-- **Desenvolvimento:** MinIO no lugar do R2 e e-mail apenas em log, para não exigir cadastro em serviços.
+- **Desenvolvimento:** imagens em pasta local no lugar do R2 e e-mail apenas em log, para não exigir cadastro em serviços.
 
 ## 4. Módulos do NestJS
 
@@ -121,14 +121,14 @@ Em uma transação, com todos os valores recalculados no servidor:
 
 Provisório: confirmar os valores de `/v1/payments` na Fase 5. A página lida descreve os status da Orders API.
 
-| Status do Mercado Pago | Pagamento | Pedido |
-|---|---|---|
-| `pending`, `in_process` | aguardando | continua `pending_payment` |
-| `approved` | aprovado | `paid` |
-| `rejected` | recusado | continua `pending_payment`, permite nova tentativa |
-| `cancelled` | cancelado | sem mudança; o job cancela ao expirar a reserva |
-| `refunded` | estornado | `refunded`, sem repor estoque automaticamente |
-| `charged_back` | contestado | preenche `review_reason` |
+| Status do Mercado Pago  | Pagamento  | Pedido                                             |
+| ----------------------- | ---------- | -------------------------------------------------- |
+| `pending`, `in_process` | aguardando | continua `pending_payment`                         |
+| `approved`              | aprovado   | `paid`                                             |
+| `rejected`              | recusado   | continua `pending_payment`, permite nova tentativa |
+| `cancelled`             | cancelado  | sem mudança; o job cancela ao expirar a reserva    |
+| `refunded`              | estornado  | `refunded`, sem repor estoque automaticamente      |
+| `charged_back`          | contestado | preenche `review_reason`                           |
 
 ### Casos de borda
 
@@ -138,12 +138,12 @@ Provisório: confirmar os valores de `/v1/payments` na Fase 5. A página lida de
 
 ### Jobs (`@nestjs/schedule`)
 
-| Frequência | Tarefa |
-|---|---|
-| 1 min | Reprocessa webhooks pendentes, com limite de tentativas. |
-| 5 min | Cancela pedidos `pending_payment` com reserva vencida e sem pagamento pendente válido. Libera estoque e cupom. |
-| 1 dia | Renova o token do Melhor Envio, que vale 30 dias. O refresh token vale 45. |
-| 1 dia | Remove carrinhos e sessões vencidos e limpa `raw`/`payload` antigos. |
+| Frequência | Tarefa                                                                                                         |
+| ---------- | -------------------------------------------------------------------------------------------------------------- |
+| 1 min      | Reprocessa webhooks pendentes, com limite de tentativas.                                                       |
+| 5 min      | Cancela pedidos `pending_payment` com reserva vencida e sem pagamento pendente válido. Libera estoque e cupom. |
+| 1 dia      | Renova o token do Melhor Envio, que vale 30 dias. O refresh token vale 45.                                     |
+| 1 dia      | Remove carrinhos e sessões vencidos e limpa `raw`/`payload` antigos.                                           |
 
 ## 7. Regras de preço
 
@@ -185,14 +185,14 @@ Cada chave tem schema Zod em `packages/shared`: `max_interest_free_installments`
 
 Um único arquivo, `apps/web/src/app/tokens.css`, com valores iniciais da `BRANDING-AREIA`. Contraste WCAG calculado:
 
-| Combinação | Contraste | Uso permitido |
-|---|---|---|
-| Cacau `#66513D` sobre Papel `#F5EFE6` | 6,54 | Texto e botões |
-| Cacau sobre Areia `#D2BFA4` | 4,17 | Só texto grande |
-| Argila `#8D7459` sobre Papel | 3,85 | Só texto grande e ícones |
-| Ouro `#CFB77F` sobre Cacau | 3,82 | Logo e texto grande |
-| Duna `#AD977B` sobre Papel | 2,45 | Só decoração |
-| Ouro sobre Papel | 1,71 | Nunca para texto. O logo dourado pede fundo Cacau. |
+| Combinação                            | Contraste | Uso permitido                                      |
+| ------------------------------------- | --------- | -------------------------------------------------- |
+| Cacau `#66513D` sobre Papel `#F5EFE6` | 6,54      | Texto e botões                                     |
+| Cacau sobre Areia `#D2BFA4`           | 4,17      | Só texto grande                                    |
+| Argila `#8D7459` sobre Papel          | 3,85      | Só texto grande e ícones                           |
+| Ouro `#CFB77F` sobre Cacau            | 3,82      | Logo e texto grande                                |
+| Duna `#AD977B` sobre Papel            | 2,45      | Só decoração                                       |
+| Ouro sobre Papel                      | 1,71      | Nunca para texto. O logo dourado pede fundo Cacau. |
 
 Fontes: Instrument Serif nos títulos e DM Sans na leitura, com `next/font/local` a partir de `Branding/BRANDING-AREIA/05-fontes`. As imagens de `02-imagens` são geradas por IA e servem só para banners institucionais, nunca como foto de produto.
 
@@ -202,10 +202,10 @@ Aprovado: **a Fase 6 (estoque) vem antes da Fase 5 (pagamento)**. A reserva nasc
 
 ## 13. Riscos em aberto
 
-| Risco | Ação |
-|---|---|
+| Risco                                                                                                                                                   | Ação                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | **"Sem juros" não confirmado.** A documentação lida do Brick só limita o número de parcelas e não diz como configurar parcelas sem juros nem quem paga. | Testar no início da Fase 5. Não exibir "sem juros" antes de confirmar o que a cliente vê. |
-| Nota fiscal está fora do MVP, mas a venda pode exigi-la desde o primeiro pedido. | Confirmar com o contador como emitir no início. |
-| Status de `/v1/payments` e formato exato do evento de webhook. | Confirmar na documentação na Fase 5. |
-| API do Payment Brick migrar para a Orders API. | `Payments` isola a chamada; reavaliar quando os guias do Brick mudarem. |
-| Cadastro em serviços (Mercado Pago, Melhor Envio, Resend, R2, VPS, domínio). | Pedir aprovação antes de cada um. |
+| Nota fiscal está fora do MVP, mas a venda pode exigi-la desde o primeiro pedido.                                                                        | Confirmar com o contador como emitir no início.                                           |
+| Status de `/v1/payments` e formato exato do evento de webhook.                                                                                          | Confirmar na documentação na Fase 5.                                                      |
+| API do Payment Brick migrar para a Orders API.                                                                                                          | `Payments` isola a chamada; reavaliar quando os guias do Brick mudarem.                   |
+| Cadastro em serviços (Mercado Pago, Melhor Envio, Resend, R2, VPS, domínio).                                                                            | Pedir aprovação antes de cada um.                                                         |

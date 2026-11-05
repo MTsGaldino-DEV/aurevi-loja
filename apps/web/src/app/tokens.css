@@ -1,0 +1,25 @@
+/* The single place for brand values. Initial palette: Branding/BRANDING-AREIA.
+   Contrast limits are in docs/ARCHITECTURE.md, section 11. */
+:root {
+  --brand-paper: #f5efe6;
+  --brand-sand: #d2bfa4;
+  --brand-dune: #ad977b;
+  --brand-clay: #8d7459;
+  --brand-cocoa: #66513d;
+  --brand-gold: #cfb77f;
+  --radius: 0.125rem;
+}
+
+@theme inline {
+  --color-paper: var(--brand-paper);
+  --color-sand: var(--brand-sand);
+  --color-dune: var(--brand-dune);
+  --color-clay: var(--brand-clay);
+  --color-cocoa: var(--brand-cocoa);
+  --color-gold: var(--brand-gold);
+  --color-background: var(--brand-paper);
+  --color-foreground: var(--brand-cocoa);
+  --font-serif: var(--font-instrument-serif);
+  --font-sans: var(--font-dm-sans);
+  --radius-sm: var(--radius);
+}
