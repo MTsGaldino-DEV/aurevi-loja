@@ -37,13 +37,10 @@ export class AdminAuthController {
   ) {
     const { email, password } = parseOrBadRequest(adminLoginSchema, body);
     const key = `${request.ip ?? 'unknown'}|${email}`;
+    if (this.loginLimit.isBlocked(key)) this.tooManyAttempts();
     const session = await this.auth.login(email, password);
     if (!session) {
-      if (!this.loginLimit.hit(key))
-        throw new HttpException(
-          'Muitas tentativas. Aguarde 15 minutos e tente de novo.',
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
+      if (!this.loginLimit.hit(key)) this.tooManyAttempts();
       throw new UnauthorizedException('E-mail ou senha incorretos.');
     }
     this.loginLimit.reset(key);
@@ -77,5 +74,12 @@ export class AdminAuthController {
       readAdminToken(request) as string,
     );
     if (!changed) throw new BadRequestException('Senha atual incorreta.');
+  }
+
+  private tooManyAttempts(): never {
+    throw new HttpException(
+      'Muitas tentativas. Aguarde 15 minutos e tente de novo.',
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
   }
 }

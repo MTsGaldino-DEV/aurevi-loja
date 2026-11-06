@@ -20,6 +20,12 @@ export class LoginRateLimit {
     return ++entry.count <= MAX_FAILURES;
   }
 
+  /** Read-only: true when the key already has 5 failures inside the window. Check before verifying the password. */
+  isBlocked(key: string, now = Date.now()) {
+    const entry = this.keys.get(key);
+    return !!entry && entry.resetAt > now && entry.count >= MAX_FAILURES;
+  }
+
   reset(key: string) {
     this.keys.delete(key);
   }
