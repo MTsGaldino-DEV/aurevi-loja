@@ -3,6 +3,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AdminAuthController } from './admin/admin-auth.controller.js';
 import { AdminOriginGuard, AdminSessionGuard } from './admin/admin-auth.guard.js';
 import { AdminAuthService } from './admin/admin-auth.service.js';
+import { DashboardController } from './admin/dashboard.controller.js';
+import { DashboardService } from './admin/dashboard.service.js';
 import { LoginRateLimit } from './admin/login-rate-limit.js';
 import { CartController } from './cart/cart.controller.js';
 import { CartService } from './cart/cart.service.js';
@@ -33,6 +35,7 @@ import { ShippingRateLimit } from './shipping/shipping-rate-limit.js';
     OrdersController,
     PaymentsController,
     AdminAuthController,
+    DashboardController,
   ],
   providers: [
     CatalogService,
@@ -47,6 +50,7 @@ import { ShippingRateLimit } from './shipping/shipping-rate-limit.js';
     PaymentsService,
     AdminAuthService,
     LoginRateLimit,
+    DashboardService,
     AdminSessionGuard,
     AdminOriginGuard,
   ],
