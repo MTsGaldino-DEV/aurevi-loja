@@ -13,6 +13,13 @@ const config: NextConfig = {
         ? [{ source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]
         : []),
       {
+        source: '/admin/:path*',
+        headers: [
+          { key: 'X-Robots-Tag', value: 'noindex' },
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
+      {
         source: '/pedido/:path*',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
