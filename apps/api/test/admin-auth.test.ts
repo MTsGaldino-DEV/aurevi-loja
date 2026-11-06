@@ -148,3 +148,82 @@ test('AdminSessionGuard: 401 sem cookie ou com token inválido; grava request.ad
   assert.equal(await guard.canActivate(contextFor(request)), true);
   assert.deepEqual(request.admin, { id: adminId, email: EMAIL });
 });
+
+// Controller: called directly with minimal fake request/response objects.
+const { AdminAuthController } = await import('../src/admin/admin-auth.controller.js');
+
+const fakeResponse = () => {
+  const calls: { cookie: unknown[][]; clearCookie: unknown[][] } = { cookie: [], clearCookie: [] };
+  const response = {
+    cookie: (...args: unknown[]) => void calls.cookie.push(args),
+    clearCookie: (...args: unknown[]) => void calls.clearCookie.push(args),
+  };
+  return { response: response as never, calls };
+};
+const newController = () => new AdminAuthController(auth, new LoginRateLimit());
+const fakeRequest = (extra: object = {}) => ({ ip: '1.2.3.4', headers: {}, ...extra }) as never;
+
+test('controller login: certo define cookie httpOnly e devolve o admin', async () => {
+  const { response, calls } = fakeResponse();
+  const result = await newController().login(fakeRequest(), response, {
+    email: ` ${EMAIL.toUpperCase()} `,
+    password: PASSWORD,
+  });
+  assert.deepEqual(result, { admin: { id: adminId, email: EMAIL } });
+  assert.equal(calls.cookie.length, 1);
+  assert.equal(calls.cookie[0]?.[0], 'aurevi_admin');
+  assert.equal((calls.cookie[0]?.[2] as { httpOnly: boolean }).httpOnly, true);
+});
+
+test('controller login: dados inválidos dão 400; senha errada dá 401 sem cookie', async () => {
+  const controller = newController();
+  const { response, calls } = fakeResponse();
+  await assert.rejects(controller.login(fakeRequest(), response, { email: 'x' }), { status: 400 });
+  await assert.rejects(
+    controller.login(fakeRequest(), response, { email: EMAIL, password: 'errada' }),
+    { status: 401, message: 'E-mail ou senha incorretos.' },
+  );
+  assert.equal(calls.cookie.length, 0);
+});
+
+test('controller login: 6ª tentativa errada dá 429; sucesso zera a contagem', async () => {
+  const controller = newController();
+  const { response } = fakeResponse();
+  const wrong = () => controller.login(fakeRequest(), response, { email: EMAIL, password: 'x' });
+  for (let i = 0; i < 4; i++) await assert.rejects(wrong(), { status: 401 });
+  await controller.login(fakeRequest(), response, { email: EMAIL, password: PASSWORD });
+  for (let i = 0; i < 5; i++) await assert.rejects(wrong(), { status: 401 });
+  await assert.rejects(wrong(), { status: 429 });
+});
+
+test('controller logout apaga a sessão e limpa o cookie', async () => {
+  const { token } = await loginOk();
+  const { response, calls } = fakeResponse();
+  await newController().logout(
+    fakeRequest({ headers: { cookie: `aurevi_admin=${token}` } }),
+    response,
+  );
+  assert.equal(calls.clearCookie.length, 1);
+  assert.equal(await auth.authenticate(token), null);
+});
+
+test('controller me devolve o admin da requisição', () => {
+  const admin = { id: adminId, email: EMAIL };
+  assert.deepEqual(newController().me(fakeRequest({ admin })), { admin });
+});
+
+test('controller password: senha atual errada dá 400; certa troca a senha', async () => {
+  const { token } = await loginOk();
+  const request = fakeRequest({
+    admin: { id: adminId, email: EMAIL },
+    headers: { cookie: `aurevi_admin=${token}` },
+  });
+  const controller = newController();
+  await assert.rejects(
+    controller.password(request, { currentPassword: 'errada', newPassword: 'nova-senha-123' }),
+    { status: 400, message: 'Senha atual incorreta.' },
+  );
+  await controller.password(request, { currentPassword: PASSWORD, newPassword: 'nova-senha-123' });
+  assert.ok(await auth.login(EMAIL, 'nova-senha-123'));
+  assert.ok(await auth.authenticate(token));
+});
