@@ -9,6 +9,9 @@ docs/research/screens/
 # Local working brief, kept private because it names the reference store.
 prompt.md
 
+# Visual brainstorming mockups: throwaway.
+.superpowers/
+
 .next/
 dist/
 .turbo/
