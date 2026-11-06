@@ -9,9 +9,11 @@ export const shippingDays = ({ minDays, maxDays }: Pick<ShippingOption, 'minDays
 export function ShippingEstimate({
   endpoint = '/api/shipping/quote',
   inputId = 'cep',
+  variantId,
 }: {
   endpoint?: string;
   inputId?: string;
+  variantId?: string;
 }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'done'>('idle');
   const [options, setOptions] = useState<ShippingOption[]>([]);
@@ -24,7 +26,7 @@ export function ShippingEstimate({
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postalCode }),
+        body: JSON.stringify({ postalCode, variantId }),
       });
       if (!response.ok) throw new Error('Quote failed');
       setOptions((await response.json()) as ShippingOption[]);

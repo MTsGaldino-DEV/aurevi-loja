@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@aurevi/shared": "workspace:*",
+    "@mercadopago/sdk-react": "1.0.7",
     "clsx": "2.1.1",
     "next": "16.4.5",
     "react": "19.3.1",

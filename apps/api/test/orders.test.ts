@@ -7,13 +7,16 @@ import { PrismaClient } from '../src/generated/prisma/client.js';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
 
 process.env['ORDER_TOKEN_SECRET'] = 'test-secret-test-secret-test-secret';
+process.env['MP_ACCESS_TOKEN'] = 'unused-in-tests';
 process.loadEnvFile('.env');
+delete process.env['MELHOR_ENVIO_CLIENT_ID'];
 process.env['DATABASE_URL'] = process.env['TEST_DATABASE_URL'] ?? '';
 assert.match(process.env['DATABASE_URL'], /_test/, 'Refusing to run outside a test database');
 
 const { OrdersService } = await import('../src/orders/orders.service.js');
 const { StockService } = await import('../src/orders/stock.service.js');
 const { ShippingService } = await import('../src/shipping/shipping.service.js');
+const { MelhorEnvioService } = await import('../src/shipping/melhor-envio.service.js');
 const { SettingsService } = await import('../src/settings/settings.service.js');
 
 const prisma = new PrismaClient({
@@ -23,7 +26,8 @@ const asService = prisma as unknown as PrismaService;
 const orders = new OrdersService(
   asService,
   new StockService(),
-  new ShippingService(new SettingsService(asService)),
+  new ShippingService(new SettingsService(asService), asService, new MelhorEnvioService(asService)),
+  new SettingsService(asService),
 );
 
 let variantId: string;
@@ -78,6 +82,10 @@ beforeEach(async () => {
   for (const [key, value] of Object.entries({
     free_shipping_threshold_cents: null,
     flat_shipping_by_uf: { MG: { label: 'Frete MG', cents: 990, minDays: 1, maxDays: 2 } },
+    shipping_origin: { postalCode: '35045120' },
+    pix_discount_percent: 10,
+    max_interest_free_installments: 5,
+    min_installment_cents: 3000,
   })) {
     await prisma.setting.create({ data: { key, value: value ?? ('null' as never) } });
   }

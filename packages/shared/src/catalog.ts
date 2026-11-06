@@ -96,6 +96,8 @@ export type StorefrontHome = {
 
 export const shippingQuoteSchema = z.object({
   postalCode: z.string().regex(/^\d{5}-?\d{3}$/, 'Informe um CEP com 8 dígitos'),
+  variantId: z.uuid().optional(),
+  quantity: z.number().int().min(1).max(10).default(1),
 });
 
 export type ShippingOption = {

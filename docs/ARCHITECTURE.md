@@ -119,16 +119,16 @@ Em uma transação, com todos os valores recalculados no servidor:
 
 ### Status
 
-Provisório: confirmar os valores de `/v1/payments` na Fase 5. A página lida descreve os status da Orders API.
+Valores confirmados nas páginas `checkout-api-payments/response-handling` da documentação. Um Pix de teste vencido seguiu como `pending` no Mercado Pago, então a data em `pix_expires_at` decide quando ele expirou. Fora os status abaixo, a loja usa `creating` e `failed` na tentativa e mostra `expired` ao cliente.
 
-| Status do Mercado Pago  | Pagamento  | Pedido                                             |
-| ----------------------- | ---------- | -------------------------------------------------- |
-| `pending`, `in_process` | aguardando | continua `pending_payment`                         |
-| `approved`              | aprovado   | `paid`                                             |
-| `rejected`              | recusado   | continua `pending_payment`, permite nova tentativa |
-| `cancelled`             | cancelado  | sem mudança; o job cancela ao expirar a reserva    |
-| `refunded`              | estornado  | `refunded`, sem repor estoque automaticamente      |
-| `charged_back`          | contestado | preenche `review_reason`                           |
+| Status do Mercado Pago         | Pagamento  | Pedido                                             |
+| ------------------------------ | ---------- | -------------------------------------------------- |
+| `pending`, `in_process`        | aguardando | continua `pending_payment`                         |
+| `approved`                     | aprovado   | `paid`                                             |
+| `rejected`                     | recusado   | continua `pending_payment`, permite nova tentativa |
+| `cancelled`                    | cancelado  | sem mudança; o job cancela ao expirar a reserva    |
+| `refunded`                     | estornado  | `refunded`, sem repor estoque automaticamente      |
+| `charged_back`, `in_mediation` | contestado | preenche `review_reason`                           |
 
 ### Casos de borda
 
@@ -165,7 +165,9 @@ Parcelas exibidas: `min(max_parcelas_sem_juros, floor(total / valor_minimo_parce
 - Timeout curto e fallback: se a API falhar, a loja oferece só a tabela por UF.
 - O limite é de 250 requisições por minuto por usuário, por isso o endpoint público de CEP tem rate limit e cache curto.
 - O sandbox só cobre Correios e Jadlog.
-- Ainda por confirmar na Fase 7: endpoint de troca do código por token.
+- Troca e renovação de tokens: `POST {base}/oauth/token`, com `authorization_code` ou `refresh_token`. Conexão local e configuração em [SHIPPING.md](SHIPPING.md).
+- Origem da Aurevi: `35045120`. Tokens cifrados com AES-256-GCM em `integration_credentials`, separados por ambiente; renovação diária e sob demanda.
+- Cache de cotação por 60 s (máximo 200 entradas), sem reutilização no checkout. Produto, sacola e criação do pedido compartilham limite de 30 consultas/minuto/IP da conexão; no proxy local do Next, essa cota é compartilhada.
 
 ## 9. `settings`
 
@@ -206,6 +208,6 @@ Aprovado: **a Fase 6 (estoque) vem antes da Fase 5 (pagamento)**. A reserva nasc
 | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | **"Sem juros" não confirmado.** A documentação lida do Brick só limita o número de parcelas e não diz como configurar parcelas sem juros nem quem paga. | Testar no início da Fase 5. Não exibir "sem juros" antes de confirmar o que a cliente vê. |
 | Nota fiscal está fora do MVP, mas a venda pode exigi-la desde o primeiro pedido.                                                                        | Confirmar com o contador como emitir no início.                                           |
-| Status de `/v1/payments` e formato exato do evento de webhook.                                                                                          | Confirmar na documentação na Fase 5.                                                      |
+| Cartões de teste recusados pelo Mercado Pago (`excludes_by_rule`, `forced_issuer`).                                                                     | Resolver antes de fechar o Checkpoint 5.                                                  |
 | API do Payment Brick migrar para a Orders API.                                                                                                          | `Payments` isola a chamada; reavaliar quando os guias do Brick mudarem.                   |
 | Cadastro em serviços (Mercado Pago, Melhor Envio, Resend, R2, VPS, domínio).                                                                            | Pedir aprovação antes de cada um.                                                         |

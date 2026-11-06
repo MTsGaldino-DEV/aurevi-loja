@@ -15,9 +15,11 @@ import {
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { parseOrBadRequest } from '../common/parse.js';
+import { ShippingRateLimit } from '../shipping/shipping-rate-limit.js';
 import { newCartToken, readCartToken } from './cart.cookie.js';
 import { CartService } from './cart.service.js';
 
@@ -76,6 +78,7 @@ export class CartController {
 
   @Post('shipping-quote')
   @HttpCode(200)
+  @UseGuards(ShippingRateLimit)
   quote(@Req() request: Request, @Body() body: unknown) {
     const { postalCode } = parseOrBadRequest(shippingQuoteSchema, body);
     return this.cart.quote(readCartToken(request), postalCode);

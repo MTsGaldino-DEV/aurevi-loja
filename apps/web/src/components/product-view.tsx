@@ -221,7 +221,9 @@ export function ProductView({
         </div>
 
         <div className="mt-8 border-t border-sand pt-6">
-          <ShippingEstimate />
+          <ShippingEstimate
+            variantId={variant?.id ?? product.variants.find((v) => v.available)?.id}
+          />
         </div>
 
         <div className="mt-8 space-y-4 border-t border-sand pt-6 leading-relaxed">

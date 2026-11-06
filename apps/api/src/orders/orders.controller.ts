@@ -1,8 +1,9 @@
 import { checkoutSchema } from '@aurevi/shared';
-import { Body, Controller, Get, HttpCode, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { readCartToken } from '../cart/cart.cookie.js';
 import { parseOrBadRequest } from '../common/parse.js';
+import { ShippingRateLimit } from '../shipping/shipping-rate-limit.js';
 import { OrdersService } from './orders.service.js';
 
 @Controller()
@@ -11,6 +12,7 @@ export class OrdersController {
 
   @Post('checkout')
   @HttpCode(201)
+  @UseGuards(ShippingRateLimit)
   async checkout(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,

@@ -125,6 +125,39 @@ export type CartView = {
 
 export type CheckoutResult = { orderNumber: number; accessToken: string };
 
+// Pix needs nothing from the browser: the payer comes from the order.
+export const payOrderSchema = z.discriminatedUnion('method', [
+  z.object({ method: z.literal('pix') }),
+  z.object({
+    method: z.literal('credit_card'),
+    token: z.string().min(1).max(200),
+    paymentMethodId: z.string().min(1).max(40),
+    issuerId: z.string().max(40).optional(),
+    installments: z.number().int().min(1).max(12),
+    payer: z.object({
+      email: z.email().max(200),
+      identification: z.object({
+        type: z.string().min(1).max(10),
+        number: z.string().min(1).max(20),
+      }),
+    }),
+  }),
+]);
+export type PayOrderInput = z.input<typeof payOrderSchema>;
+export type PayOrderData = z.output<typeof payOrderSchema>;
+
+export type PaymentView = {
+  method: 'pix' | 'credit_card';
+  /** Provider status, plus "creating", "failed" and "expired" from this store. */
+  status: string;
+  message: string | null;
+  amountCents: number;
+  installments: number;
+  pixQrCode: string | null;
+  pixQrCodeBase64: string | null;
+  pixExpiresAt: string | null;
+};
+
 export type OrderView = {
   number: number;
   status: string;
@@ -136,6 +169,15 @@ export type OrderView = {
   shippingCents: number;
   totalCents: number;
   couponCode: string | null;
+  payerEmail: string;
+  payment: PaymentView | null;
+  paymentOptions: {
+    cardTotalCents: number;
+    pixTotalCents: number;
+    pixDiscountCents: number;
+    pixDiscountPercent: number;
+    maxInstallments: number;
+  };
   shippingMethod: { label: string; minDays: number; maxDays: number };
   shippingAddress: Omit<CheckoutData['address'], 'postalCode'> & { postalCode: string };
   items: {

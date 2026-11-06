@@ -3,13 +3,16 @@ import {
   type CheckoutResult,
   computeTotals,
   couponProblem,
+  orderPaymentOptions,
   type OrderView,
 } from '@aurevi/shared';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, createHmac } from 'node:crypto';
 import { env } from '../env.js';
 import { Prisma } from '../generated/prisma/client.js';
+import { paymentMessage } from '../payments/payment-message.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { SettingsService } from '../settings/settings.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
 import { StockService } from './stock.service.js';
 
@@ -19,12 +22,19 @@ const hash = (token: string) => createHash('sha256').update(token).digest('hex')
 
 type OrderTx = Prisma.TransactionClient;
 
+// A payment that may still be approved: card under review, or Pix whose QR has not expired.
+export const openPaymentWhere = (now: Date): Prisma.PaymentWhereInput => ({
+  status: { in: ['pending', 'in_process'] },
+  OR: [{ pixExpiresAt: null }, { pixExpiresAt: { gt: now } }],
+});
+
 @Injectable()
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stock: StockService,
     private readonly shipping: ShippingService,
+    private readonly settings: SettingsService,
   ) {}
 
   // Derived from the checkout key, so retrying the same submit returns the same order link.
@@ -90,11 +100,13 @@ export class OrdersService {
       shippingCents: 0,
       pixDiscountPercent: 0,
     });
-    const options = await this.shipping.quote(
-      input.address.postalCode,
-      merchandiseCents,
-      coupon?.type === 'free_shipping',
-    );
+    const options = await this.shipping.quote({
+      postalCode: input.address.postalCode,
+      eligibleCents: merchandiseCents,
+      forceFree: coupon?.type === 'free_shipping',
+      items: lines.map(({ variantId, quantity }) => ({ variantId, quantity })),
+      fresh: true,
+    });
     const option = options.find((candidate) => candidate.id === input.shippingOptionId);
     if (!option) throw new ConflictException('O frete mudou. Escolha uma opção de novo.');
 
@@ -160,13 +172,52 @@ export class OrdersService {
     }
   }
 
+  async findByToken(token: string) {
+    const order = await this.prisma.order.findUnique({ where: { accessTokenHash: hash(token) } });
+    if (!order) throw new NotFoundException('Pedido não encontrado');
+    return order;
+  }
+
   async viewByToken(token: string): Promise<OrderView> {
     const order = await this.prisma.order.findUnique({
       where: { accessTokenHash: hash(token) },
-      include: { items: true },
+      include: { items: true, payments: { orderBy: { createdAt: 'desc' }, take: 1 } },
     });
     if (!order) throw new NotFoundException('Pedido não encontrado');
+    const [pixDiscountPercent, maxInstallments, minInstallmentCents] = await Promise.all([
+      this.settings.get('pix_discount_percent'),
+      this.settings.get('max_interest_free_installments'),
+      this.settings.get('min_installment_cents'),
+    ]);
+    const payment = order.payments[0];
+    // Mercado Pago can take a while to report an expired QR, so the date decides.
+    const pixExpired =
+      payment?.method === 'pix' &&
+      ((payment.status === 'pending' &&
+        payment.pixExpiresAt &&
+        payment.pixExpiresAt <= new Date()) ||
+        payment.statusDetail === 'expired');
+    const paymentStatus = pixExpired ? 'expired' : payment?.status;
     return {
+      payerEmail: (order.customerSnapshot as { email: string }).email,
+      paymentOptions: orderPaymentOptions(order, {
+        pixDiscountPercent,
+        maxInstallments,
+        minInstallmentCents,
+      }),
+      payment:
+        payment && paymentStatus
+          ? {
+              method: payment.method,
+              status: paymentStatus,
+              message: paymentMessage(paymentStatus, payment.statusDetail),
+              amountCents: payment.amountCents,
+              installments: payment.installments,
+              pixQrCode: payment.pixQrCode,
+              pixQrCodeBase64: payment.pixQrCodeBase64,
+              pixExpiresAt: payment.pixExpiresAt?.toISOString() ?? null,
+            }
+          : null,
       number: order.number,
       status: order.status,
       createdAt: order.createdAt.toISOString(),
@@ -212,6 +263,45 @@ export class OrdersService {
     return tx ? run(tx) : this.prisma.$transaction(run);
   }
 
+  async flagForReview(orderId: string, reason: string, tx: OrderTx) {
+    await tx.order.update({ where: { id: orderId }, data: { reviewReason: reason } });
+  }
+
+  // A payment approved after the job canceled the order: sell it if the pieces are still there.
+  async reviveCanceled(orderId: string): Promise<boolean> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const { count } = await tx.order.updateMany({
+          where: { id: orderId, status: 'canceled' },
+          data: { status: 'paid', paidAt: new Date(), canceledAt: null },
+        });
+        if (count === 0) return false;
+        const lines = await this.stockLines(tx, orderId);
+        await this.stock.reserve(tx, orderId, lines);
+        await this.stock.commitSale(tx, orderId, lines);
+        const { couponId } = await tx.order.findUniqueOrThrow({
+          where: { id: orderId },
+          select: { couponId: true },
+        });
+        if (couponId) {
+          await tx.coupon.update({
+            where: { id: couponId },
+            data: { usesCount: { increment: 1 } },
+          });
+        }
+        return true;
+      });
+    } catch (error) {
+      if (!(error instanceof ConflictException)) throw error;
+      await this.flagForReview(
+        orderId,
+        'Pagamento aprovado depois do cancelamento e sem estoque. Reembolsar.',
+        this.prisma,
+      );
+      return false;
+    }
+  }
+
   async cancelPending(orderId: string): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
       const { count } = await tx.order.updateMany({
@@ -236,7 +326,19 @@ export class OrdersService {
 
   async cancelExpired(now = new Date()) {
     const expired = await this.prisma.order.findMany({
-      where: { status: 'pending_payment', reservationExpiresAt: { lt: now } },
+      where: {
+        status: 'pending_payment',
+        reservationExpiresAt: { lt: now },
+        payments: {
+          none: {
+            OR: [
+              openPaymentWhere(now),
+              // Outcome still unknown after a failed request; the webhook may yet answer.
+              { status: 'creating', createdAt: { gt: new Date(now.getTime() - 5 * 60_000) } },
+            ],
+          },
+        },
+      },
       select: { id: true },
     });
     let canceled = 0;
