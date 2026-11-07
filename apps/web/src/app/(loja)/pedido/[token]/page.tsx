@@ -1,7 +1,7 @@
 import { formatBRL, type OrderView } from '@aurevi/shared';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { OrderPayment } from '../../../components/order-payment';
+import { OrderPayment } from '@/components/order-payment';
 
 export const metadata: Metadata = {
   title: 'Seu pedido',

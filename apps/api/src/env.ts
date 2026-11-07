@@ -11,6 +11,8 @@ export const env = z
     MP_ACCESS_TOKEN: z.string().min(1),
     // Optional so the store runs before the panel generates it. Without it, webhooks are refused.
     MP_WEBHOOK_SECRET: z.string().min(1).optional(),
+    // Comma-separated origins allowed to make state-changing admin requests.
+    ADMIN_ALLOWED_ORIGINS: z.string().min(1).default('http://localhost:3000'),
     MELHOR_ENVIO_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
     MELHOR_ENVIO_CLIENT_ID: z.string().regex(/^\d+$/).optional(),
     MELHOR_ENVIO_CLIENT_SECRET: z.string().min(1).optional(),

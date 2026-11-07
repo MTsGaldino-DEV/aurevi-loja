@@ -19,3 +19,4 @@ dist/
 apps/api/src/generated/
 
 apps/web/next-env.d.ts
+apps/web/AGENTS.md

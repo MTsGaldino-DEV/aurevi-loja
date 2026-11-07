@@ -1,5 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AdminAuthController } from './admin/admin-auth.controller.js';
+import { AdminOriginGuard, AdminSessionGuard } from './admin/admin-auth.guard.js';
+import { AdminAuthService } from './admin/admin-auth.service.js';
+import { AdminOrdersController } from './admin/admin-orders.controller.js';
+import { AdminOrdersService } from './admin/admin-orders.service.js';
+import { DashboardController } from './admin/dashboard.controller.js';
+import { DashboardService } from './admin/dashboard.service.js';
+import { LoginRateLimit } from './admin/login-rate-limit.js';
 import { CartController } from './cart/cart.controller.js';
 import { CartService } from './cart/cart.service.js';
 import { CatalogController } from './catalog/catalog.controller.js';
@@ -28,6 +36,9 @@ import { ShippingRateLimit } from './shipping/shipping-rate-limit.js';
     CartController,
     OrdersController,
     PaymentsController,
+    AdminAuthController,
+    DashboardController,
+    AdminOrdersController,
   ],
   providers: [
     CatalogService,
@@ -40,6 +51,12 @@ import { ShippingRateLimit } from './shipping/shipping-rate-limit.js';
     OrdersJobs,
     MercadoPagoGateway,
     PaymentsService,
+    AdminAuthService,
+    LoginRateLimit,
+    DashboardService,
+    AdminOrdersService,
+    AdminSessionGuard,
+    AdminOriginGuard,
   ],
 })
 export class AppModule {}
