@@ -38,13 +38,19 @@ function Menu({
   const pathname = usePathname();
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
+  const [error, setError] = useState('');
 
   async function logout() {
     setLeaving(true);
+    setError('');
     try {
-      await fetch('/api/admin/auth/logout', { method: 'POST' });
+      const response = await fetch('/api/admin/auth/logout', { method: 'POST' });
+      // 401: the session is already gone, which is what leaving means.
+      if (!response.ok && response.status !== 401) throw new Error(String(response.status));
     } catch {
-      // Offline: the cookie stays, but the user is sent to the login anyway and the proxy sorts it out.
+      setError('Não foi possível sair. Verifique a conexão e tente de novo.');
+      setLeaving(false);
+      return;
     }
     router.replace('/admin/login');
   }
@@ -98,6 +104,9 @@ function Menu({
         >
           {leaving ? 'Saindo…' : 'Sair'}
         </button>
+        <p role="status" aria-live="polite" className="px-3 text-sm">
+          {error}
+        </p>
       </div>
     </div>
   );
