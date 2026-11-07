@@ -179,7 +179,7 @@ Cada chave tem schema Zod em `packages/shared`: `max_interest_free_installments`
 
 - **Cartão:** tokenizado no navegador pelo Brick. Número e CVV nunca passam pela API. O Access Token fica só na API.
 - **Admin:** cookie `HttpOnly`, `Secure`, `SameSite=Lax`; senha com argon2; rate limit no login; checagem de `Origin` em escritas.
-- **Público:** rate limit por IP real (`CF-Connecting-IP`), aceito só quando vem do proxy; Zod em toda entrada; CSP com as origens exigidas pelo Mercado Pago, a confirmar na Fase 5.
+- **Público:** rate limit por IP; hoje usa o IP da conexão (`request.ip`), e o alvo de produção é o IP real via `CF-Connecting-IP`, aceito só quando vem do proxy (ainda não implementado, ver a pendência de produção mais abaixo); Zod em toda entrada; CSP com as origens exigidas pelo Mercado Pago, a confirmar na Fase 5.
 - **Compra sem conta:** o e-mail nunca revela nem preenche dados de compras anteriores. O pedido só abre com o token do link.
 - **Dados:** coleta mínima, com CPF exigido apenas para pagamento e entrega. Backups cifrados antes de ir para bucket privado.
 - **Infra:** Postgres sem porta pública. Na Cloudflare, modo SSL Full (strict); forma de certificado no Caddy a confirmar na implantação.
