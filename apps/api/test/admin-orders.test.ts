@@ -59,6 +59,16 @@ test('list filters by status', async () => {
   assert.equal(res.items[0]?.status, 'paid');
 });
 
+test('list status to_ship matches paid and preparing only', async () => {
+  const a = await addOrder('paid');
+  const b = await addOrder('preparing');
+  await addOrder('pending_payment');
+  await addOrder('shipped');
+  const res = await orders.list({ status: 'to_ship', page: 1 });
+  assert.deepEqual(res.items.map((i) => i.number).sort(), [a.number, b.number].sort());
+  assert.equal(res.total, 2);
+});
+
 test('list filters by date range in Sao Paulo days, inclusive of the last day', async () => {
   await addOrder('paid', '2026-11-01T02:59:59Z'); // 10-31 23:59 in SP: out
   const a = await addOrder('paid', '2026-11-01T03:00:00Z'); // 11-01 00:00 in SP: in

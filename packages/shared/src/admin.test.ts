@@ -45,6 +45,11 @@ test('order list query defaults page to 1', () => {
   assert.equal(adminOrderListQuerySchema.parse({ status: 'paid', q: ' ana ' }).q, 'ana');
 });
 
+test('order list query accepts the to_ship pseudo-status', () => {
+  assert.equal(adminOrderListQuerySchema.parse({ status: 'to_ship' }).status, 'to_ship');
+  assert.equal(adminOrderListQuerySchema.safeParse({ status: 'nope' }).success, false);
+});
+
 test('transitions only move an order forward', () => {
   assert.deepEqual(adminTransitions.canceled, []);
   assert.ok(adminTransitions.paid.includes('shipped'));

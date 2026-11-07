@@ -33,7 +33,8 @@ export class AdminOrdersService {
 
   async list(query: AdminOrderListQuery): Promise<AdminOrderList> {
     const where: Prisma.OrderWhereInput = {};
-    if (query.status) where.status = query.status;
+    if (query.status === 'to_ship') where.status = { in: ['paid', 'preparing'] };
+    else if (query.status) where.status = query.status;
 
     const from = query.from ? dayStart(query.from) : undefined;
     const to = query.to ? dayStart(query.to) : undefined;

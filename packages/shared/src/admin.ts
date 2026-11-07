@@ -14,7 +14,8 @@ export const adminPasswordChangeSchema = z.object({
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const adminOrderListQuerySchema = z.object({
-  status: z.enum(orderStatuses).optional(),
+  // 'to_ship' = paid or preparing (the Início "pagos para enviar" count)
+  status: z.union([z.enum(orderStatuses), z.literal('to_ship')]).optional(),
   from: isoDay.optional(),
   to: isoDay.optional(),
   q: z.string().trim().max(80).optional(),

@@ -22,6 +22,7 @@ export function OrderFilters({
         Status
         <select name="status" defaultValue={status} className={FIELD}>
           <option value="">Todos</option>
+          <option value="to_ship">A enviar (pagos e em preparação)</option>
           {orderStatuses.map((value) => (
             <option key={value} value={value}>
               {statusLabel(value)}

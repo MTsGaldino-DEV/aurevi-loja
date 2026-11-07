@@ -20,7 +20,7 @@ const FOCUS = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<Params> }) {
   const raw = await searchParams;
-  const status = (orderStatuses as readonly string[]).includes(first(raw['status'])) ? first(raw['status']) : '';
+  const status = [...orderStatuses, 'to_ship'].includes(first(raw['status'])) ? first(raw['status']) : '';
   const from = validDay(first(raw['from']));
   const to = validDay(first(raw['to']));
   const q = first(raw['q']).trim().slice(0, 80);

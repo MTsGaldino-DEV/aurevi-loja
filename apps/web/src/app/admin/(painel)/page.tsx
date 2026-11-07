@@ -70,7 +70,7 @@ export default async function AdminHome() {
           one="pedido pago para enviar"
           many="pedidos pagos para enviar"
           empty="Pedidos pagos para enviar"
-          href="/admin/pedidos?status=paid"
+          href="/admin/pedidos?status=to_ship"
         />
         <Row
           count={d.pendingPaymentCount}
