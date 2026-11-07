@@ -24,7 +24,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const from = validDay(first(raw['from']));
   const to = validDay(first(raw['to']));
   const q = first(raw['q']).trim().slice(0, 80);
-  const page = Math.max(1, Math.floor(Number(first(raw['page']))) || 1);
+  const page = Math.min(100000, Math.max(1, Math.floor(Number(first(raw['page']))) || 1)); // API caps page at 100000
 
   const filters = { status, from, to, q };
   const hasFilters = Object.values(filters).some(Boolean);

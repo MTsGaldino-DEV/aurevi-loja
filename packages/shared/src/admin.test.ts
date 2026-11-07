@@ -50,6 +50,12 @@ test('order list query accepts the to_ship pseudo-status', () => {
   assert.equal(adminOrderListQuerySchema.safeParse({ status: 'nope' }).success, false);
 });
 
+test('order list query caps page so skip stays small', () => {
+  assert.equal(adminOrderListQuerySchema.safeParse({ page: '100000' }).success, true);
+  assert.equal(adminOrderListQuerySchema.safeParse({ page: '100001' }).success, false);
+  assert.equal(adminOrderListQuerySchema.safeParse({ page: '99999999999' }).success, false);
+});
+
 test('transitions only move an order forward', () => {
   assert.deepEqual(adminTransitions.canceled, []);
   assert.ok(adminTransitions.paid.includes('shipped'));

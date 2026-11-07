@@ -1,6 +1,6 @@
 // Integration tests against real Postgres: filters, search escaping and conditional transitions.
 import { PrismaPg } from '@prisma/adapter-pg';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, before, beforeEach, test } from 'node:test';
@@ -12,6 +12,7 @@ process.env['DATABASE_URL'] = process.env['TEST_DATABASE_URL'] ?? '';
 assert.match(process.env['DATABASE_URL'], /_test/, 'Refusing to run outside a test database');
 
 const { AdminOrdersService } = await import('../src/admin/admin-orders.service.js');
+const { AdminOrdersController } = await import('../src/admin/admin-orders.controller.js');
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env['DATABASE_URL'] }),
@@ -132,6 +133,22 @@ test('list paginates 20 per page, newest first, and a far page is empty with the
   assert.deepEqual(far.items, []);
   assert.equal(far.total, 21);
   assert.equal(far.page, 99);
+});
+
+test('list at the highest allowed page is empty with the real total', async () => {
+  await addOrder('paid');
+  const res = await orders.list({ page: 100000 });
+  assert.deepEqual(res.items, []);
+  assert.equal(res.total, 1);
+});
+
+test('controller answers 404 for order numbers outside the int range', async () => {
+  const controller = new AdminOrdersController(orders);
+  for (const bad of [0, -1, 2_147_483_648, 1e20]) {
+    await assert.rejects(controller.detail(bad), NotFoundException);
+    await assert.rejects(controller.changeStatus(bad, { status: 'preparing' }), NotFoundException);
+  }
+  await assert.rejects(controller.detail(2_147_483_647), NotFoundException); // valid but absent
 });
 
 test('list items expose only the allowed keys', async () => {

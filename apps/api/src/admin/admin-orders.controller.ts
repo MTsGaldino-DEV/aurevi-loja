@@ -21,6 +21,13 @@ import { parseOrBadRequest } from '../common/parse.js';
 import { AdminOriginGuard, AdminSessionGuard } from './admin-auth.guard.js';
 import { AdminOrdersService } from './admin-orders.service.js';
 
+const MAX_ORDER_NUMBER = 2_147_483_647; // Postgres int4
+
+// Numbers outside the column's range can never exist; answer 404 instead of letting the DB fail.
+function assertOrderNumber(number: number) {
+  if (number < 1 || number > MAX_ORDER_NUMBER) throw new NotFoundException('Pedido não encontrado');
+}
+
 @Controller('admin/orders')
 @UseGuards(AdminSessionGuard)
 export class AdminOrdersController {
@@ -33,6 +40,7 @@ export class AdminOrdersController {
 
   @Get(':number')
   async detail(@Param('number', ParseIntPipe) number: number): Promise<AdminOrderDetail> {
+    assertOrderNumber(number);
     const order = await this.orders.detail(number);
     if (!order) throw new NotFoundException('Pedido não encontrado');
     return order;
@@ -45,6 +53,7 @@ export class AdminOrdersController {
     @Param('number', ParseIntPipe) number: number,
     @Body() body: unknown,
   ): Promise<{ ok: true }> {
+    assertOrderNumber(number);
     const result = await this.orders.changeStatus(number, parseOrBadRequest(adminOrderStatusSchema, body));
     if (result === 'not_found') throw new NotFoundException('Pedido não encontrado');
     if (result === 'invalid_transition') throw new ConflictException('Transição de status inválida');

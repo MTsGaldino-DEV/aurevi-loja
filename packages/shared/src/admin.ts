@@ -19,7 +19,7 @@ export const adminOrderListQuerySchema = z.object({
   from: isoDay.optional(),
   to: isoDay.optional(),
   q: z.string().trim().max(80).optional(),
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(100000).default(1),
 });
 export type AdminOrderListQuery = z.infer<typeof adminOrderListQuerySchema>;
 
