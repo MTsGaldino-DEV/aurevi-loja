@@ -207,6 +207,17 @@ test('controller logout apaga a sessão e limpa o cookie', async () => {
   assert.equal(await auth.authenticate(token), null);
 });
 
+test('noStore marca a resposta como não armazenável e segue a cadeia', async () => {
+  const { noStore } = await import('../src/admin/no-store.js');
+  const headers: Record<string, string> = {};
+  let called = false;
+  noStore({} as never, { setHeader: (k: string, v: string) => void (headers[k] = v) } as never, () => {
+    called = true;
+  });
+  assert.deepEqual(headers, { 'Cache-Control': 'no-store' });
+  assert.ok(called);
+});
+
 test('controller me devolve o admin da requisição', () => {
   const admin = { id: adminId, email: EMAIL };
   assert.deepEqual(newController().me(fakeRequest({ admin })), { admin });
