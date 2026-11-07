@@ -228,16 +228,25 @@ test('controller password: senha atual errada dá 400; certa troca a senha', asy
   assert.ok(await auth.authenticate(token));
 });
 
-test('LoginRateLimit.isBlocked: livre com 4 falhas, bloqueia com 5, libera após a janela', () => {
-  const limit = new LoginRateLimit();
-  const t0 = 1_000_000;
-  assert.equal(limit.isBlocked('ip', t0), false);
-  for (let i = 0; i < 4; i++) limit.hit('ip', t0 + i);
-  assert.equal(limit.isBlocked('ip', t0 + 10), false);
-  limit.hit('ip', t0 + 5);
-  assert.equal(limit.isBlocked('ip', t0 + 10), true);
-  assert.equal(limit.isBlocked('ip', t0 + 10), true); // read-only: does not count
-  assert.equal(limit.isBlocked('ip', t0 + 15 * 60_000 + 1), false);
+test('controller login: 10 tentativas erradas em paralelo, no máximo 5 chegam a verificar a senha', async () => {
+  let verified = 0;
+  const countingAuth = {
+    login: (email: string, password: string) => {
+      verified++;
+      return auth.login(email, password);
+    },
+  };
+  const controller = new AdminAuthController(countingAuth as never, new LoginRateLimit());
+  const { response } = fakeResponse();
+  const results = await Promise.allSettled(
+    Array.from({ length: 10 }, () =>
+      controller.login(fakeRequest(), response, { email: EMAIL, password: 'x' }),
+    ),
+  );
+  const statuses = results.map((r) => (r.status === 'rejected' ? (r.reason as { status: number }).status : 200));
+  assert.ok(verified <= 5, `verified=${verified}`);
+  assert.equal(statuses.filter((s) => s === 401).length, verified);
+  assert.equal(statuses.filter((s) => s === 429).length, 10 - verified);
 });
 
 test('controller login: bloqueado após 5 falhas, nem a senha certa passa e não há cookie', async () => {

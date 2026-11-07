@@ -37,12 +37,10 @@ export class AdminAuthController {
   ) {
     const { email, password } = parseOrBadRequest(adminLoginSchema, body);
     const key = `${request.ip ?? 'unknown'}|${email}`;
-    if (this.loginLimit.isBlocked(key)) this.tooManyAttempts();
+    // Reserve the attempt before the (slow) verification so parallel requests cannot all slip through.
+    if (!this.loginLimit.hit(key)) this.tooManyAttempts();
     const session = await this.auth.login(email, password);
-    if (!session) {
-      if (!this.loginLimit.hit(key)) this.tooManyAttempts();
-      throw new UnauthorizedException('E-mail ou senha incorretos.');
-    }
+    if (!session) throw new UnauthorizedException('E-mail ou senha incorretos.');
     this.loginLimit.reset(key);
     setAdminCookie(response, session.token, session.expiresAt);
     return { admin: session.admin };

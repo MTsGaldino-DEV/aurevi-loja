@@ -9,7 +9,7 @@ const MAX_KEYS = 5000;
 export class LoginRateLimit {
   private readonly keys = new Map<string, { count: number; resetAt: number }>();
 
-  /** Registers a failed login. Returns false once the key exceeded 5 failures in 15 minutes. */
+  /** Reserves a login attempt (call before verifying; reset on success). False once the key exceeded 5 attempts in 15 minutes. */
   hit(key: string, now = Date.now()) {
     let entry = this.keys.get(key);
     if (!entry || entry.resetAt <= now) {
@@ -18,12 +18,6 @@ export class LoginRateLimit {
       this.keys.set(key, entry);
     }
     return ++entry.count <= MAX_FAILURES;
-  }
-
-  /** Read-only: true when the key already has 5 failures inside the window. Check before verifying the password. */
-  isBlocked(key: string, now = Date.now()) {
-    const entry = this.keys.get(key);
-    return !!entry && entry.resetAt > now && entry.count >= MAX_FAILURES;
   }
 
   reset(key: string) {
