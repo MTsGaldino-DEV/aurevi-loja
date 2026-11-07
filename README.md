@@ -2,6 +2,8 @@
 
 Loja própria de moda feminina. Decisões e fluxos em [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+Configuração e conexão do Melhor Envio em [docs/SHIPPING.md](docs/SHIPPING.md).
+
 ## Requisitos
 
 Node 24, pnpm 12 e Docker.

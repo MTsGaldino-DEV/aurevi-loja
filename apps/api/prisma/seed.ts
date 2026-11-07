@@ -24,7 +24,7 @@ const defaults: { [K in SettingKey]: SettingValue<K> } = {
         : { label: `Frete fixo ${uf}`, cents: 2490, minDays: 5, maxDays: 10 },
     ]),
   ),
-  shipping_origin: { postalCode: '01001000' },
+  shipping_origin: { postalCode: '35045120' },
   announcement_messages: ['Ambiente de desenvolvimento: produtos fictícios'],
   home_hero: {
     imageKey: 'brand/editorial-linho.webp',

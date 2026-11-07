@@ -174,10 +174,11 @@ export class CartService {
 
   async quote(token: string | undefined, postalCode: string): Promise<ShippingOption[]> {
     const cart = await this.view(token);
-    return this.shipping.quote(
+    return this.shipping.quote({
       postalCode,
-      cart.merchandiseCents,
-      cart.coupon?.type === 'free_shipping',
-    );
+      eligibleCents: cart.merchandiseCents,
+      forceFree: cart.coupon?.type === 'free_shipping',
+      items: cart.items.map(({ variantId, quantity }) => ({ variantId, quantity })),
+    });
   }
 }

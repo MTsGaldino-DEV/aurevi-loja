@@ -1,6 +1,7 @@
 import { formatBRL, type OrderView } from '@aurevi/shared';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { OrderPayment } from '../../../components/order-payment';
 
 export const metadata: Metadata = {
   title: 'Seu pedido',
@@ -35,14 +36,15 @@ export default async function OrderPage({ params }: { params: Promise<{ token: s
         <h1 className="font-serif text-5xl">Pedido #{order.number}</h1>
         <p className="mt-2 font-medium">{statusText[order.status] ?? order.status}</p>
 
-        {order.status === 'pending_payment' && (
-          <section className="mt-8 bg-sand p-5">
-            <h2 className="font-serif text-3xl">Pagamento</h2>
-            <p className="mt-2 text-sm">
-              Suas peças estão reservadas. O pagamento por Pix e cartão entra com as credenciais de
-              teste do Mercado Pago.
-            </p>
-          </section>
+        {order.status === 'pending_payment' && <OrderPayment token={token} order={order} />}
+        {order.status === 'paid' && (
+          <p className="mt-4 text-sm">Recebemos seu pagamento. Agora vamos preparar suas peças.</p>
+        )}
+        {order.status === 'canceled' && (
+          <p className="mt-4 text-sm">
+            Este pedido foi cancelado porque o pagamento não foi concluído. Para comprar estas
+            peças, faça um novo pedido.
+          </p>
         )}
 
         <section className="mt-8 text-sm">

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { PaymentsService } from '../payments/payments.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { OrdersService } from './orders.service.js';
 
@@ -10,7 +11,13 @@ export class OrdersJobs {
   constructor(
     private readonly orders: OrdersService,
     private readonly prisma: PrismaService,
+    private readonly payments: PaymentsService,
   ) {}
+
+  @Cron('* * * * *')
+  retryWebhooks() {
+    return this.payments.processPendingWebhooks();
+  }
 
   @Cron('*/5 * * * *')
   async releaseExpiredReservations() {

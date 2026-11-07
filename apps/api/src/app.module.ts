@@ -9,10 +9,15 @@ import { OrdersController } from './orders/orders.controller.js';
 import { OrdersJobs } from './orders/orders.jobs.js';
 import { OrdersService } from './orders/orders.service.js';
 import { StockService } from './orders/stock.service.js';
+import { MercadoPagoGateway } from './payments/mercadopago.gateway.js';
+import { PaymentsController } from './payments/payments.controller.js';
+import { PaymentsService } from './payments/payments.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { ShippingController } from './shipping/shipping.controller.js';
 import { ShippingService } from './shipping/shipping.service.js';
+import { MelhorEnvioService } from './shipping/melhor-envio.service.js';
+import { ShippingRateLimit } from './shipping/shipping-rate-limit.js';
 
 @Module({
   imports: [ScheduleModule.forRoot(), PrismaModule, SettingsModule],
@@ -22,14 +27,19 @@ import { ShippingService } from './shipping/shipping.service.js';
     ShippingController,
     CartController,
     OrdersController,
+    PaymentsController,
   ],
   providers: [
     CatalogService,
     ShippingService,
+    MelhorEnvioService,
+    ShippingRateLimit,
     CartService,
     OrdersService,
     StockService,
     OrdersJobs,
+    MercadoPagoGateway,
+    PaymentsService,
   ],
 })
 export class AppModule {}

@@ -69,3 +69,20 @@ export function applyFreeShipping<T extends { cents: number }>(
   const index = options.findIndex((option) => option.cents === cheapest);
   return options.map((option, i) => (i === index ? { ...option, cents: 0 } : option));
 }
+
+// What each payment method costs for an order. The Pix discount applies to merchandise, not shipping.
+export function orderPaymentOptions(
+  order: { subtotalCents: number; discountCents: number; shippingCents: number },
+  rules: { pixDiscountPercent: number; maxInstallments: number; minInstallmentCents: number },
+) {
+  const merchandiseCents = order.subtotalCents - order.discountCents;
+  const pixMerchandiseCents = pixPriceCents(merchandiseCents, rules.pixDiscountPercent);
+  const cardTotalCents = merchandiseCents + order.shippingCents;
+  return {
+    cardTotalCents,
+    pixTotalCents: pixMerchandiseCents + order.shippingCents,
+    pixDiscountCents: merchandiseCents - pixMerchandiseCents,
+    pixDiscountPercent: rules.pixDiscountPercent,
+    maxInstallments: installmentPlan(cardTotalCents, rules).count,
+  };
+}

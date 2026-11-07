@@ -9,6 +9,9 @@ const config: NextConfig = {
   // Order links carry an access token, which must not leak through the Referer header.
   async headers() {
     return [
+      ...(process.env['PREVIEW_MODE'] === 'true'
+        ? [{ source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]
+        : []),
       {
         source: '/pedido/:path*',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],

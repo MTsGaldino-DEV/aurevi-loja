@@ -8,10 +8,11 @@
     "build": "prisma generate && nest build",
     "start": "node dist/main.js",
     "typecheck": "prisma generate && tsc --noEmit",
-    "test": "pnpm exec prisma migrate deploy --config prisma.test.config.ts && node --import tsx --test test/*.test.ts",
+    "test": "pnpm exec prisma migrate deploy --config prisma.test.config.ts && node --import tsx --test --test-concurrency=1 test/*.test.ts",
     "lint": "eslint src test prisma/seed.ts --config ../../eslint.config.mjs",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "shipping:connect": "node --import tsx src/shipping/connect.ts"
   },
   "dependencies": {
     "@aurevi/shared": "workspace:*",
@@ -22,6 +23,7 @@
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "argon2": "0.45.2",
+    "mercadopago": "3.6.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "zod": "4.6.7"
