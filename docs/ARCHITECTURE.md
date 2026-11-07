@@ -50,6 +50,8 @@ Navegador -> Cloudflare -> Caddy -> /api/*  -> api (NestJS) -> postgres
 
 Catalog, Cart, Checkout, Orders, Payments, Webhooks, Shipping, Coupons, Customers, Notifications, Admin/Auth, Jobs, Settings.
 
+`Admin/Auth` está implementado na Etapa 1 do painel: login, sessão, troca de senha, início e pedidos. Detalhes em [Painel admin](#painel-admin-etapa-1), na §10.
+
 `Checkout` orquestra a criação do pedido. Só `Orders` muda o status do pedido, e estoque só muda por um serviço único que grava `stock_movements` na mesma transação.
 
 ## 5. SQL manual da migration inicial
@@ -182,6 +184,33 @@ Cada chave tem schema Zod em `packages/shared`: `max_interest_free_installments`
 - **Dados:** coleta mínima, com CPF exigido apenas para pagamento e entrega. Backups cifrados antes de ir para bucket privado.
 - **Infra:** Postgres sem porta pública. Na Cloudflare, modo SSL Full (strict); forma de certificado no Caddy a confirmar na implantação.
 - **Backup:** `pg_dump` diário com retenção de 30 dias e restauração testada antes de abrir a loja.
+
+### Painel admin (Etapa 1)
+
+O painel fica em `/admin`, dentro do app Next, com layout próprio. A loja foi para o grupo de rotas `(loja)`, sem mudar as URLs. As páginas de `/admin/*` são `noindex` e `no-store`. `apps/web/src/proxy.ts` redireciona para `/admin/login` quando o cookie não existe; é só atalho, a checagem real fica na API.
+
+Rotas da API (prefixo `/api`):
+
+| Método | Rota                               | Função                                                            |
+| ------ | ---------------------------------- | ----------------------------------------------------------------- |
+| POST   | `/api/admin/auth/login`            | Entra                                                             |
+| POST   | `/api/admin/auth/logout`           | Sai                                                               |
+| GET    | `/api/admin/auth/me`               | Dados da sessão                                                   |
+| POST   | `/api/admin/auth/password`         | Troca a senha                                                     |
+| GET    | `/api/admin/dashboard`             | Números do início                                                 |
+| GET    | `/api/admin/orders`                | Lista; filtros `status`, `from`, `to`, `q`, `page`; 20 por página |
+| GET    | `/api/admin/orders/:number`        | Detalhe do pedido                                                 |
+| POST   | `/api/admin/orders/:number/status` | Muda o status                                                     |
+
+- **Sessão:** guardada no servidor, em `admin_sessions`, com só o hash SHA-256 do token. Cookie `aurevi_admin`: `HttpOnly`, `SameSite=Lax`, `Secure` em produção, path `/`, validade de 7 dias.
+- **Origin:** escritas (POST) exigem o header `Origin` listado em `ADMIN_ALLOWED_ORIGINS` (padrão `http://localhost:3000`). Em produção, usar a origem pública da loja.
+- **Limite de login:** 5 falhas em 15 minutos por chave `ip|email`, em memória (vale para uma única instância da API). A checagem acontece antes de a senha ser verificada.
+- **Senha:** argon2, mínimo de 10 caracteres. Trocar a senha encerra as outras sessões.
+- **Transições de status:** `paid` -> `preparing` ou `shipped`; `preparing` -> `shipped`; `shipped` -> `delivered`. `shipped` exige código de rastreio, gravado em `shipments`.
+- **Números do início:** vendido = pedidos `paid`, `preparing`, `shipped` e `delivered`, por `paidAt`, no fuso America/Sao_Paulo (UTC-3); semana de segunda a domingo; mês civil; total. Estoque baixo = `stock_on_hand - stock_reserved <= 2` em variantes ativas.
+- **Menu:** itens ainda não construídos aparecem como "Em breve".
+
+**Pendência de produção (antes de abrir o painel à internet):** a API não confia em proxy e não lê `CF-Connecting-IP`. Por isso o limite de login enxerga o IP da conexão; atrás da Cloudflare e do Caddy, todos os visitantes pareceriam um só IP. Configurar `trust proxy` e cabeçalhos encaminhados sanitizados. Também recomendado antes de ir ao ar: verificação em duas etapas (futura).
 
 ## 11. Design tokens
 

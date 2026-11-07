@@ -25,6 +25,17 @@ pnpm dev
 
 Loja em <http://localhost:3000>. Verificação da API em <http://localhost:3000/api/health>.
 
+## Painel admin
+
+Criar o primeiro admin, no banco local:
+
+1. Em `apps/api/.env`, preencher `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD`.
+2. Rodar `pnpm --filter @aurevi/api db:seed`.
+
+Entrar com a API (`pnpm --filter @aurevi/api dev`) e o web (`pnpm --filter @aurevi/web dev`) rodando, em <http://localhost:3000/admin/login>.
+
+Senha esquecida: por enquanto, quem tem acesso ao banco redefine a senha. A recuperação por e-mail fica para a Fase 9.
+
 ## Comandos
 
 | Comando          | Função                           |
