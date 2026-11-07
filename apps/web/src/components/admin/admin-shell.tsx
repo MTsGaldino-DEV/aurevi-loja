@@ -52,9 +52,9 @@ function Menu({
   function renderItem({ label, href }: Item) {
     if (!href) {
       return (
-        <li key={label} className={`${ROW} text-clay`}>
+        <li key={label} className="flex min-h-9 items-center justify-between gap-2 px-3 py-1.5 text-clay">
           <span>{label}</span>
-          <span className="rounded-sm border border-sand px-2 text-xs">Em breve</span>
+          <span className="shrink-0 rounded-sm border border-sand px-2 text-xs whitespace-nowrap">Em breve</span>
         </li>
       );
     }
@@ -75,8 +75,7 @@ function Menu({
 
   return (
     <div className="flex h-full flex-col">
-      <p className="px-3 text-sm tracking-[0.2em] text-clay uppercase">Aurevi</p>
-      <nav aria-label="Painel" className="mt-4 flex-1 overflow-y-auto">
+      <nav aria-label="Painel" className="flex-1 overflow-y-auto">
         <ul>{MAIN.map(renderItem)}</ul>
         <ul className="mt-4 border-t border-sand pt-4">{LATER.map(renderItem)}</ul>
       </nav>
@@ -125,8 +124,11 @@ export function AdminShell({ email, children }: { email: string; children: React
 
   return (
     <div className="flex flex-1 flex-col lg:flex-row">
-      <aside className="hidden w-64 shrink-0 border-r border-sand p-4 lg:sticky lg:top-0 lg:block lg:h-screen">
-        <Menu email={email} />
+      <aside className="hidden w-64 shrink-0 border-r border-sand p-4 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
+        <p className="mb-4 px-3 text-sm tracking-[0.2em] text-clay uppercase">Aurevi</p>
+        <div className="min-h-0 flex-1">
+          <Menu email={email} />
+        </div>
       </aside>
 
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-sand bg-paper px-gutter lg:hidden">
@@ -153,14 +155,12 @@ export function AdminShell({ email, children }: { email: string; children: React
             aria-label="Menu do painel"
             className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-paper p-4"
           >
-            <button
-              ref={closeButton}
-              type="button"
-              onClick={() => setOpen(false)}
-              className={`${ROW} ${FOCUS} mb-2 self-end`}
-            >
-              Fechar
-            </button>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="px-3 text-sm tracking-[0.2em] text-clay uppercase">Aurevi</p>
+              <button ref={closeButton} type="button" onClick={() => setOpen(false)} className={`${ROW} ${FOCUS}`}>
+                Fechar
+              </button>
+            </div>
             <div className="min-h-0 flex-1">
               <Menu email={email} onNavigate={() => setOpen(false)} />
             </div>

@@ -69,11 +69,8 @@ export function PasswordForm() {
         Confirmar nova senha
         <input name="confirm" type="password" autoComplete="new-password" required className={FIELD} />
       </label>
-      <p role="alert" aria-live="polite" className="min-h-6 text-sm font-medium text-cocoa">
-        {error}
-      </p>
-      <p role="status" className="min-h-6 text-sm font-medium text-cocoa">
-        {done ? 'Senha alterada com sucesso.' : ''}
+      <p role="status" aria-live="polite" className="min-h-6 text-sm font-medium text-cocoa">
+        {error || (done ? 'Senha alterada com sucesso.' : '')}
       </p>
       <button
         type="submit"
