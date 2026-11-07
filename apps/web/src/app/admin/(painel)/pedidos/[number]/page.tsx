@@ -15,6 +15,16 @@ const text = (source: Record<string, unknown> | null | undefined, key: string) =
 };
 
 const methodLabels: Record<string, string> = { pix: 'Pix', credit_card: 'Cartão de crédito' };
+const paymentStatusLabels: Record<string, string> = {
+  approved: 'Aprovado',
+  pending: 'Pendente',
+  in_process: 'Em análise',
+  rejected: 'Recusado',
+  cancelled: 'Cancelado',
+  canceled: 'Cancelado',
+  refunded: 'Reembolsado',
+  charged_back: 'Estornado',
+};
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -133,7 +143,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                   {methodLabels[payment.method] ?? payment.method}
                   {payment.installments && payment.installments > 1 && ` em ${payment.installments}x`}
                   <span className="block text-sm text-clay">
-                    {payment.status} · {formatDateTime(payment.createdAt)}
+                    {paymentStatusLabels[payment.status] ?? payment.status} ·{formatDateTime(payment.createdAt)}
                   </span>
                 </span>
                 <span className="shrink-0">{formatBRL(payment.amountCents)}</span>
